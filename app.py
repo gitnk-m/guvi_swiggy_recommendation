@@ -16,34 +16,34 @@ with zipfile.ZipFile(zip_path, 'r') as z:
 # ---------------------
 
 
-with open("pickles/city_area.pkl", "rb") as f:
+with open("pickles_unzip/city_area.pkl", "rb") as f:
     city_area_dict = pickle.load(f)
 
-with open("pickles/cuisines.pkl", "rb") as f:
+with open("pickles_unzip/cuisines.pkl", "rb") as f:
     cuisines_list = pickle.load(f)
 
-with open("pickles/rating_counts.pkl", "rb") as f:
+with open("pickles_unzip/rating_counts.pkl", "rb") as f:
     rating_list = pickle.load(f)
 
-with open("pickles/oneHot_cuisine.pkl", "rb") as f:
+with open("pickles_unzip/oneHot_cuisine.pkl", "rb") as f:
     encoder_cuisine = pickle.load(f)
 
-with open("pickles/oneHot_city.pkl", "rb") as f:
+with open("pickles_unzip/oneHot_city.pkl", "rb") as f:
     encoder_city = pickle.load(f)
 
-with open("pickles/label_area.pkl", "rb") as f:
+with open("pickles_unzip/label_area.pkl", "rb") as f:
     label_area = pickle.load(f)
 
-with open("pickles/encoder_rating_count.pkl", "rb") as f:
+with open("pickles_unzip/encoder_rating_count.pkl", "rb") as f:
     encoder_rating_count = pickle.load(f)
 
-with open("pickles/kmeans_model.pkl", "rb") as f:
+with open("pickles_unzip/kmeans_model.pkl", "rb") as f:
     model = pickle.load(f)
 
-with open("pickles/processed_df.pkl", "rb") as f:
+with open("pickles_unzip/processed_df.pkl", "rb") as f:
     processed_df = pickle.load(f)
 
-with open("pickles/encoded_df.pkl", "rb") as f:
+with open("pickles_unzip/encoded_df.pkl", "rb") as f:
     encoded_df = pickle.load(f)
 
 # ---------------------
