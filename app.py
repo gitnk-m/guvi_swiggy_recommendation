@@ -51,12 +51,11 @@ with open("pickles_unzip/encoded_df.pkl", "rb") as f:
 # ---------------------
 def get_recommendations(city, area, cuisine, min_rating):
     # df = processed_df.copy()
-    print(f"Inputs: city={city}, area={area}, cuisine={cuisine}, min_rating={min_rating}")
     user_df = pd.DataFrame([{
         "rating": 3,
         "rating_count": min_rating,
         "cost": processed_df['cost'].median(),
-        "area": area.lower(),
+        "area": area.capitalize(),
         "cuisine_1": cuisine,
         "cuisine_2": cuisine,
         "city_main": city.capitalize()
@@ -127,8 +126,40 @@ def get_recommendations(city, area, cuisine, min_rating):
     )
     
     # print(recommendations.head(10))
-    return recommendations.head(10)
+    return recommendations.head(100)
     # return df
+
+
+# -----------------------
+# TIERED PRIORITY SYSTEM
+# -----------------------
+
+def compute_priority(row, city, area, c1):
+    score = 0
+    area = area.capitalize()
+    city = city.capitalize()
+    c1 = c1.capitalize()
+    # Perfect match: area + cuisine + city
+    if (row["area"] == area and 
+        (row["cuisine_1"] == c1 or row["cuisine_2"] == c1) and 
+        row["city_main"] == city):
+        score += 4
+
+    # City + Cuisine match
+    elif ((row["cuisine_1"] == c1 or row["cuisine_2"] == c1) and 
+           row["city_main"] == city):
+        score += 3
+
+    # Area + City match
+    elif (row["area"] == area and row["city_main"] == city):
+        score += 2
+
+    # City-only match
+    elif row["city_main"] == city:
+        score += 1
+
+    return score
+
 
 
 # ---------------------
@@ -138,6 +169,7 @@ st.set_page_config(page_title="Restaurant Recommendation", layout="wide")
 
 st.title("🍽️ Smart Restaurant Recommendation App")
 st.write("Choose your preferences and get personalized restaurant suggestions.")
+st.write("ML Model powered by KMeans Clustering and Cosine Similarity, with hybrid filtering!")
 
 # CITY
 city = st.selectbox("Select City", sorted(city_area_dict.keys()))
@@ -172,67 +204,138 @@ sort_option = st.radio(
 # ---------------------
 # Submit Button
 # ---------------------
-if st.button("Get Recommendations"):
-    st.subheader("Top Recommendations")
+# if st.button("Get Recommendations"):
+#     st.subheader("Top Recommendations")
 
+#     results = get_recommendations(city, area, cuisine, min_rating)
+#     results["priority"] = results.apply(
+#         lambda row: compute_priority(row, city, area, cuisine),
+#         axis=1
+#     )
+
+#     # FINAL SORTING:
+#     # results = results.sort_values(
+#     #     by=["priority", "similarity_score"],
+#     #     ascending=[False, False]
+#     # )
+
+
+#     # results = results.sort_values(
+#     #     by=["priority"],
+#     #     ascending=[True]
+#     # )
+
+#     # APPLY SORTING
+#     if len(results) > 0:
+#         if sort_option == "Rating: High to Low":
+#             results = results.sort_values(by="rating", ascending=False)
+
+#         elif sort_option == "Cost: Low to High":
+#             results = results.sort_values(by="cost", ascending=True)
+
+#         elif sort_option == "Cost: High to Low":
+#             results = results.sort_values(by="cost", ascending=False)
+#         elif sort_option == "Defalut":
+#             results = results.sort_values(
+#                 by=["priority", "similarity_score"],
+#                 ascending=[False, False]
+#             )
+#     else:
+#         st.warning("No matching restaurants found.")
+#         st.stop()
+
+#     # DISPLAY RESULTS IN CARD FORMAT
+#     # for _, row in results.head(10).iterrows():
+#     #     with st.container():
+#     #         st.markdown(
+#     #             f"""
+#     #             <div style="
+#     #                 padding: 15px;
+#     #                 margin: 10px 0;
+#     #                 border-radius: 12px;
+#     #                 background: #f8f8f8;
+#     #                 border: 1px solid #ddd;">
+                    
+#     #                 <h3 style="margin-bottom:5px;">{row.get('restaurant_name', '')}</h3>
+#     #                 <p><b>Area:</b> {row.get('area','')}</p>
+#     #                 <p><b>Cuisine:</b> {row.get('cuisines','')}</p>
+#     #                 <p><b>Rating:</b> ⭐ {row.get('rating','')}</p>
+#     #                 <p><b>Cost for Two:</b> ₹{row.get('cost','')}</p>
+#     #             </div>
+#     #             """,
+#     #             unsafe_allow_html=True
+#     #         )
+
+#     if results is not None and len(results) > 0:
+
+#         # Create a combined location column
+#         results["location"] = results["area"] + ", " + results["city_main"]
+
+#         # Select + rename columns for display
+#         display_df = results[[
+#             "name",
+#             "address",
+#             "location",
+#             "cuisine",
+#             "rating",
+#             "link"
+#         ]].rename(columns={
+#             "name": "Restaurant Name",
+#             "address": "Address",
+#             "location": "Location",
+#             "cuisine": "Cuisine",
+#             "rating": "Rating",
+#             "link": "Restaurant Link"
+#         })
+
+#         st.table(display_df)
+ 
+if "results" not in st.session_state:
+    st.session_state.results = None
+
+if st.button("Get Recommendations"):
     results = get_recommendations(city, area, cuisine, min_rating)
 
-    # APPLY SORTING
-    if len(results) > 0:
-        if sort_option == "Rating: High to Low":
-            results = results.sort_values(by="rating", ascending=False)
+    results["priority"] = results.apply(
+        lambda row: compute_priority(row, city, area, cuisine),
+        axis=1
+    )
+    
+    # Store in session_state
+    st.session_state.results = results
 
-        elif sort_option == "Cost: Low to High":
-            results = results.sort_values(by="cost", ascending=True)
+results = st.session_state.results
 
-        elif sort_option == "Cost: High to Low":
-            results = results.sort_values(by="cost", ascending=False)
-    else:
-        st.warning("No matching restaurants found.")
-        st.stop()
+if results is not None:
+    # Sort based on user choice
+    if sort_option == "Rating: High to Low":
+        results = results.sort_values(by=["priority","rating"], ascending=False)
 
-    # DISPLAY RESULTS IN CARD FORMAT
-    # for _, row in results.head(10).iterrows():
-    #     with st.container():
-    #         st.markdown(
-    #             f"""
-    #             <div style="
-    #                 padding: 15px;
-    #                 margin: 10px 0;
-    #                 border-radius: 12px;
-    #                 background: #f8f8f8;
-    #                 border: 1px solid #ddd;">
-                    
-    #                 <h3 style="margin-bottom:5px;">{row.get('restaurant_name', '')}</h3>
-    #                 <p><b>Area:</b> {row.get('area','')}</p>
-    #                 <p><b>Cuisine:</b> {row.get('cuisines','')}</p>
-    #                 <p><b>Rating:</b> ⭐ {row.get('rating','')}</p>
-    #                 <p><b>Cost for Two:</b> ₹{row.get('cost','')}</p>
-    #             </div>
-    #             """,
-    #             unsafe_allow_html=True
-    #         )
+    elif sort_option == "Cost: Low to High":
+        results = results.sort_values(by=["priority","cost"], ascending=True)
 
-    if results is not None and len(results) > 0:
+    elif sort_option == "Cost: High to Low":
+        results = results.sort_values(by=["priority","cost"], ascending=False)
 
-        # Create a combined location column
-        results["location"] = results["area"] + ", " + results["city_main"]
+    elif sort_option == "Defalut":
+        results = results.sort_values(
+            by=["priority", "similarity_score"],
+            ascending=[False, False]
+        )
 
-        # Select + rename columns for display
-        display_df = results[[
-            "name",
-            "address",
-            "location",
-            "cuisine",
-            "rating",
-            "link"
-        ]].rename(columns={
-            "name": "Restaurant Name",
-            "address": "Address",
-            "location": "Location",
-            "cuisine": "Cuisine",
-            "rating": "Rating",
-            "link": "Restaurant Link"
-        })
+if results is not None and len(results) > 0:
 
-        st.table(display_df)
+    results["location"] = results["area"] + ", " + results["city_main"]
+
+    display_df = results[[
+        "name", "address", "location", "cuisine", "rating", "link"
+    ]].rename(columns={
+        "name": "Restaurant Name",
+        "address": "Address",
+        "location": "Location",
+        "cuisine": "Cuisine",
+        "rating": "Rating",
+        "link": "Restaurant Link"
+    })
+    
+    st.table(display_df.head(10))
