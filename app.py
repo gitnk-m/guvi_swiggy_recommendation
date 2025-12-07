@@ -162,6 +162,7 @@ def compute_priority(row, city, area, c1):
 
 
 
+# hybrid_filtering = True
 # ---------------------
 # Streamlit UI
 # ---------------------
@@ -170,6 +171,8 @@ st.set_page_config(page_title="Restaurant Recommendation", layout="wide")
 st.title("🍽️ Smart Restaurant Recommendation App")
 st.write("Choose your preferences and get personalized restaurant suggestions.")
 st.write("ML Model powered by KMeans Clustering and Cosine Similarity, with hybrid filtering!")
+
+hybrid_filtering = st.toggle("Enable Hybrid Filtering (Priority based on exact matches)", value=True, key="hybrid_filtering")
 
 # CITY
 city = st.selectbox("Select City", sorted(city_area_dict.keys()))
@@ -296,10 +299,13 @@ if "results" not in st.session_state:
 if st.button("Get Recommendations"):
     results = get_recommendations(city, area, cuisine, min_rating)
 
-    results["priority"] = results.apply(
-        lambda row: compute_priority(row, city, area, cuisine),
-        axis=1
-    )
+    if hybrid_filtering:
+        results["priority"] = results.apply(
+            lambda row: compute_priority(row, city, area, cuisine),
+            axis=1
+        )
+    else:
+        results["priority"] = 0
     
     # Store in session_state
     st.session_state.results = results
@@ -324,7 +330,7 @@ if results is not None:
         )
 
 if results is not None and len(results) > 0:
-
+    print(hybrid_filtering)
     results["location"] = results["area"] + ", " + results["city_main"]
 
     display_df = results[[
